@@ -1,12 +1,14 @@
 import tkinter as tk
+from tkinter import messagebox
 import threading
 import requests
 import random
 
 class StreamViewer:
-    def __init__(self, root):
+    def init(self, root):
         self.root = root
         self.root.title("Stream Viewer")
+        self.root.geometry("400x300")
         self.proxies = self.load_proxies("proxies.txt")  # Загрузка списка прокси из файла
         self.running = False
         self.threads = []
@@ -17,7 +19,7 @@ class StreamViewer:
         self.url_entry = tk.Entry(root, width=50)
         self.url_entry.pack()
 
-        # Поле для ввода прокси
+        # Поле для ввода прокси (опционально)
         self.proxy_label = tk.Label(root, text="Proxy (IP:Port):")
         self.proxy_label.pack()
         self.proxy_entry = tk.Entry(root, width=50)
@@ -36,25 +38,41 @@ class StreamViewer:
         self.stop_button.pack()
 
     def load_proxies(self, filename):
-        with open(filename, "r") as file:
-            proxies = file.read().splitlines()
-        return proxies
+        try:
+            with open(filename, "r") as file:
+                proxies = file.read().splitlines()
+            return proxies
+        except FileNotFoundError:
+            messagebox.showerror("Error", f"File {filename} not found!")
+            return []
 
     def start(self):
         if not self.running:
             self.running = True
             url = self.url_entry.get()
-            num_viewers = int(self.viewers_entry.get())
+            num_viewers = self.viewers_entry.get()
+
+            if not url:
+                messagebox.showerror("Error", "Please enter a valid stream URL.")
+                return
+            if not num_viewers.isdigit() or int(num_viewers) <= 0:
+                messagebox.showerror("Error", "Please enter a valid number of viewers.")
+                return
+
+            num_viewers = int(num_viewers)
             for _ in range(num_viewers):
                 thread = threading.Thread(target=self.watch_stream, args=(url,))
                 self.threads.append(thread)
                 thread.start()
+            messagebox.showinfo("Info", f"Started {num_viewers} viewers.")
 
     def stop(self):
-        self.running = False
-        for thread in self.threads:
-            thread.join()
-        self.threads = []
+        if self.running:
+            self.running = False
+            for thread in self.threads:
+                thread.join()
+            self.threads = []
+            messagebox.showinfo("Info", "Stopped all viewers.")
 
     def watch_stream(self, url):
         while self.running:
@@ -71,7 +89,7 @@ class StreamViewer:
     def get_random_proxy(self):
         return random.choice(self.proxies)
 
-if __name__ == "__main__":
+if "Stream Viewer" == "main":
     root = tk.Tk()
     app = StreamViewer(root)
     root.mainloop()
